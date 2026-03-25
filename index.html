@@ -26,7 +26,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Segoe UI','Helvetica Neue',Arial,system-ui,sans-serif;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -35,9 +35,32 @@ body {
   padding: 28px 16px 60px;
   gap: 18px;
   background-image:
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(74,158,255,0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(245,200,66,0.05) 0%, transparent 70%);
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(74,158,255,0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(245,200,66,0.025) 0%, transparent 70%);
 }
+
+#bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -20;
+  pointer-events: none;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 25, 0.45);
+  z-index: -10;
+  pointer-events: none;
+}
+#game, #dex-panel {
+  position: relative;
+  z-index: 1;
+}
+
 #game { width: 100%; max-width: 560px; flex-shrink: 0; }
 
 /* ── Pokédex Sidebar ── */
@@ -465,11 +488,11 @@ h1 {
 
 /* ── Ninja mode body background ── */
 body.ninja-mode {
-  background: #050010 !important;
+  background: transparent !important;
   background-image:
-    radial-gradient(ellipse 70% 50% at 50% 0%,   rgba(136,51,255,0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(80,20,180,0.08)  0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 80% 30%, rgba(200,80,255,0.06) 0%, transparent 70%) !important;
+    radial-gradient(ellipse 70% 50% at 50% 0%,   rgba(136,51,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(80,20,180,0.05)  0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 30%, rgba(200,80,255,0.04) 0%, transparent 70%) !important;
 }
 body.ninja-mode #game,
 body.ninja-mode #dex-panel-inner {
@@ -591,6 +614,10 @@ body.ninja-mode::after {
 </style>
 </head>
 <body>
+<video autoplay muted loop playsinline id="bg-video">
+  <source src="grok-video-530ba824-d087-4413-84eb-df2295015de1 (1).mp4" type="video/mp4">
+</video>
+
 <div id="overlay"></div>
 
 <!-- Fireworks Overlay -->
@@ -1886,21 +1913,6 @@ function checkAnswer(){
     if(getLvI()>prev)growAll();
     fb.textContent=RIGHT[Math.floor(Math.random()*RIGHT.length)];
     fb.className="feedback-right";
-    async function afterCorrectAnswer() {
-  correct += 1;
-  streak += 1;
-
-  await saveCloudProgress(activeNinjaName, {
-    name: activeNinjaName,
-    pin: activeNinjaPin,
-    correct,
-    streak,
-    currentMode,
-    timerEnabled,
-    kittyCount,
-    mons
-  });
-}
     playCelebration();
     addMon(correct%TREAT_EVERY===0);
     updateBars();
@@ -3037,68 +3049,7 @@ newQuestion();
       return;
     }
     var empty = $('empty-msg');
-    if(empty) empty.remove();function slugify(name) {
-  return String(name || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 24);
-}
-
-async function cloudLoginOrCreate(name, pin) {
-  const db = window.pokimathDb;
-  const { doc, getDoc, setDoc, serverTimestamp } = window.pokimathFirestore;
-
-  const ninjaId = slugify(name);
-  const ref = doc(db, "ninjas", ninjaId);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    const newSave = {
-      name,
-      pin,
-      correct: 0,
-      streak: 0,
-      currentMode: "addition",
-      timerEnabled: true,
-      kittyCount: 0,
-      mons: [],
-      updatedAt: serverTimestamp()
-    };
-    await setDoc(ref, newSave);
-    return newSave;
-  }
-
-  const data = snap.data();
-  if ((data.pin || "") !== (pin || "")) {
-    throw new Error("Wrong secret code");
-  }
-
-  return data;
-}async function saveCloudProgress(activeNinjaName, gameState) {
-  const db = window.pokimathDb;
-  const { doc, setDoc, serverTimestamp } = window.pokimathFirestore;
-
-  const ninjaId = slugify(activeNinjaName);
-  const ref = doc(db, "ninjas", ninjaId);
-
-  await setDoc(ref, {
-    ...gameState,
-    updatedAt: serverTimestamp()
-  }, { merge: true });
-}function applyCloudState(data) {
-  correct = Number(data.correct || 0);
-  streak = Number(data.streak || 0);
-  currentMode = data.currentMode || "addition";
-  timerEnabled = data.timerEnabled !== false;
-  kittyCount = Number(data.kittyCount || 0);
-  mons = Array.isArray(data.mons) ? data.mons : [];
-
-  document.getElementById("correct-count").textContent = String(correct);
-  document.getElementById("streak-count").textContent = String(streak);
-  document.getElementById("kitty-count").textContent = String(kittyCount);
-}
+    if(empty) empty.remove();
 
     list.forEach(function(saved, i){
       var made = makeCreature(saved.size || 52, saved.seed || 1);
@@ -3250,31 +3201,5 @@ async function cloudLoginOrCreate(name, pin) {
 })();
 </script>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-  import {
-    getFirestore,
-    doc,
-    getDoc,
-    setDoc,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
-
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyCkR7lnqlkHBAUY8q1WWn-EnYwmtu_pLVE",
-  authDomain: "pokemath-game.firebaseapp.com",
-  projectId: "pokemath-game",
-  storageBucket: "pokemath-game.firebasestorage.app",
-  messagingSenderId: "53923015594",
-  appId: "1:53923015594:web:13b8f668ecdf8acd2519d3",
-  measurementId: "G-4TTW1PX33R"
-};
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window.pokimathDb = db;
-  window.pokimathFirestore = { doc, getDoc, setDoc, serverTimestamp };
-</script>
 </body>
 </html>
